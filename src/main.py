@@ -21,7 +21,7 @@ sys.path.insert(0, str(project_root))
 try:
     import core.models as models
     import core.exceptions as exceptions
-    import config.settings as config
+    from config.settings import settings
     
     print("✅ Basic imports successful")
     
@@ -29,7 +29,6 @@ try:
     TravelItinerary = models.TravelItinerary
     TravelPlannerError = exceptions.TravelPlannerError
     ValidationError = exceptions.ValidationError
-    settings = config.settings
     
 except ImportError as e:
     print(f"❌ Import error: {e}")

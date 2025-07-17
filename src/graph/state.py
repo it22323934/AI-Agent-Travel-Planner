@@ -45,6 +45,10 @@ class TravelPlanningState(TypedDict):
     critic_feedback: Annotated[List[Dict[str, Any]], operator.add]
     optimization_rounds: int
     
+    # Planning context and data quality
+    planning_context: Dict[str, Any]
+    data_quality: Dict[str, Any]
+    
     # Metadata
     processing_start_time: datetime
     last_updated: datetime
@@ -70,7 +74,10 @@ def create_initial_state(travel_request: TravelRequest) -> TravelPlanningState:
         optimization_rounds=0,
         processing_start_time=datetime.utcnow(),
         last_updated=datetime.utcnow(),
-        error_messages=[]
+        error_messages=[],
+        # Add missing fields
+        data_quality={"completeness": 0, "freshness": datetime.utcnow().isoformat()},
+        planning_context={}
     )
 
 

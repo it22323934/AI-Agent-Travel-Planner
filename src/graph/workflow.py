@@ -18,6 +18,7 @@ from graph.nodes import (
     itinerary_creation_node,
     trip_criticism_node,
     should_optimize_again,
+    optimize_itinerary_node,
     finalization_node
 )
 from core.models import TravelRequest, TravelItinerary
@@ -53,6 +54,7 @@ class TravelPlanningWorkflow:
         workflow.add_node("handle_insufficient_data", handle_insufficient_data_node)
         workflow.add_node("itinerary_creation", itinerary_creation_node)
         workflow.add_node("trip_criticism", trip_criticism_node)
+        workflow.add_node("optimize_itinerary", optimize_itinerary_node)  # Add missing node
         workflow.add_node("finalization", finalization_node)
         
         # Set entry point
@@ -89,10 +91,13 @@ class TravelPlanningWorkflow:
             "trip_criticism",
             should_optimize_again,
             {
-                "optimize_itinerary": "itinerary_creation",  # Loop back for re-optimization
+                "optimize_itinerary": "optimize_itinerary",  # Route to our optimizer node
                 "finalization": "finalization"
             }
         )
+        
+        # Optimizer -> Itinerary Creation (for the next round of optimization)
+        workflow.add_edge("optimize_itinerary", "itinerary_creation")
         
         # Finalization -> End
         workflow.add_edge("finalization", END)

@@ -6,7 +6,7 @@ import json
 from typing import Dict, Any, List
 from datetime import datetime
 
-from core.models import TravelItinerary, DailyPlan, PlaceRecommendation, WeatherInfo
+from core.models import TravelItinerary, DailyPlan, PlaceRecommendation, WeatherInfo, ActivityType
 
 
 def format_itinerary_output(itinerary: TravelItinerary, format_type: str = "detailed") -> str:
@@ -76,27 +76,45 @@ def format_itinerary_detailed(itinerary: TravelItinerary) -> str:
     
     for day_plan in itinerary.daily_plans:
         output.append(f"\n📆 {day_plan.date}")
-        output.append(f"Weather: {day_plan.weather.description} ({day_plan.weather.temperature_high}°C)")
+        if day_plan.weather:
+            output.append(f"Weather: {day_plan.weather.description if day_plan.weather.description else 'Unknown'} ({day_plan.weather.temperature_high}°C)")
         
-        if day_plan.morning_activities:
+        # Group activities by time period
+        morning_activities = day_plan.get_activities_by_time_period(6, 12)
+        afternoon_activities = day_plan.get_activities_by_time_period(12, 18)
+        evening_activities = day_plan.get_activities_by_time_period(18, 24)
+        
+        # Display activities by time period
+        if morning_activities:
             output.append("🌅 Morning:")
-            for activity in day_plan.morning_activities:
-                output.append(f"  • {activity}")
+            for activity in morning_activities:
+                output.append(f"  • {activity.start_time} - {activity.end_time}: {activity.name}")
+                if activity.description:
+                    output.append(f"    {activity.description}")
         
-        if day_plan.afternoon_activities:
+        if afternoon_activities:
             output.append("☀️ Afternoon:")
-            for activity in day_plan.afternoon_activities:
-                output.append(f"  • {activity}")
+            for activity in afternoon_activities:
+                output.append(f"  • {activity.start_time} - {activity.end_time}: {activity.name}")
+                if activity.description:
+                    output.append(f"    {activity.description}")
         
-        if day_plan.evening_activities:
+        if evening_activities:
             output.append("🌙 Evening:")
-            for activity in day_plan.evening_activities:
-                output.append(f"  • {activity}")
+            for activity in evening_activities:
+                output.append(f"  • {activity.start_time} - {activity.end_time}: {activity.name}")
+                if activity.description:
+                    output.append(f"    {activity.description}")
         
-        if day_plan.recommended_restaurants:
-            output.append("🍽️ Recommended Dining:")
-            for restaurant in day_plan.recommended_restaurants:
-                output.append(f"  • {restaurant.name} (★{restaurant.rating})")
+        # Also show dining activities separately
+        dining_activities = day_plan.get_activities_by_type(ActivityType.DINING)
+        if dining_activities:
+            output.append("🍽️ Dining:")
+            for activity in dining_activities:
+                output.append(f"  • {activity.start_time}: {activity.name}")
+        
+        if not day_plan.activities:
+            output.append("  No activities scheduled for this day")
         
         output.append("")
     

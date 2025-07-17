@@ -79,7 +79,10 @@ safe_import("agents.trip_critic", "TripCritic", "Trip Critic Agent")
 print("\n🌐 Loading Workflow Components...")
 safe_import("graph.workflow", "TravelPlanningWorkflow", "Travel Planning Workflow")
 safe_import("graph.state", "TravelPlanningState", "Travel Planning State")
-safe_import("graph.nodes", "create_nodes", "Graph Nodes")
+# Import individual node functions instead of non-existent create_nodes
+from graph.nodes import __all__ as node_functions
+for node_func in node_functions:
+    safe_import("graph.nodes", node_func, f"Graph Node: {node_func}")
 
 print("\n🛠️ Loading Utility Components...")
 # safe_import("utils.validators", "validate_dates", "Date Validator")
@@ -200,16 +203,16 @@ async def run_travel_planner():
         result = await workflow.execute(request)
         
         # Display results
-        if result and hasattr(result, 'itinerary'):
+        if result:  # The result is the TravelItinerary object itself
             print(f"\n✅ TRAVEL PLAN COMPLETE!")
             print("=" * 40)
             
             if 'format_itinerary_output' in components:
                 formatter = components['format_itinerary_output']
-                formatted = formatter(result.itinerary)
+                formatted = formatter(result)  # Pass the entire result (TravelItinerary) to formatter
                 print(formatted)
             else:
-                print(result.itinerary)
+                print(result)
         else:
             print(f"\n⚠️ Workflow completed but no itinerary generated")
             
