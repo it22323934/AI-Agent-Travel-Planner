@@ -12,7 +12,7 @@ from agents.base_agent import LLMAgent
 from agents.prompts import get_agent_prompt, format_prompt
 from core.models import PlaceRecommendation, WeatherInfo, DailyPlan
 from core.exceptions import AgentError
-from core.constants import ACTIVITY_DURATIONS, TIME_PREFERENCES
+from core.constants import ACTIVITY_DURATIONS
 
 
 class ItineraryExpert(LLMAgent):

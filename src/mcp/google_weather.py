@@ -18,7 +18,7 @@ class GoogleWeatherConnector(BaseMCPConnector):
     """MCP connector for Google Weather API"""
     
     def __init__(self, api_key: str):
-        super().__init__(api_key, "google_weather")
+        super().__init__("AIzaSyA-hts7zA_2B0HzOrYJB-FIbhM4Z4VP5TQ", "google_weather")
         self.base_url = "https://weather.googleapis.com"
     
     async def test_connection(self) -> bool:

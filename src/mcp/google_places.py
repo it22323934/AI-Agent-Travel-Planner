@@ -16,7 +16,7 @@ class GooglePlacesConnector(BaseMCPConnector):
     """MCP connector for Google Places API"""
     
     def __init__(self, api_key: str):
-        super().__init__(api_key, "google_places")
+        super().__init__("AIzaSyA-hts7zA_2B0HzOrYJB-FIbhM4Z4VP5TQ", "google_places")
         self.base_url = GOOGLE_APIS["places_base"]
     
     async def test_connection(self) -> bool:
