@@ -89,8 +89,8 @@ class TravelPlanningWorkflow:
             "trip_criticism",
             should_optimize_again,
             {
-                "optimize": "itinerary_creation",  # Loop back for re-optimization
-                "finalize": "finalization"
+                "optimize_itinerary": "itinerary_creation",  # Loop back for re-optimization
+                "finalization": "finalization"
             }
         )
         

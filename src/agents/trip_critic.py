@@ -1,6 +1,6 @@
 """
-Itinerary Expert Agent - Creates detailed day-by-day travel itineraries
-Implements comprehensive itinerary planning and optimization
+Trip Critic Agent - Reviews and provides feedback on travel itineraries
+Implements comprehensive quality control and optimization suggestions
 """
 
 import json
@@ -15,39 +15,39 @@ from core.exceptions import AgentError
 from core.constants import ACTIVITY_DURATIONS
 
 
-class ItineraryExpert(LLMAgent):
+class TripCritic(LLMAgent):
     """
-    Itinerary expert agent that creates detailed day-by-day travel plans
+    Trip critic agent that reviews and evaluates travel itineraries
     
     Responsibilities:
-    - Create detailed daily itineraries with optimal timing
-    - Balance activities with rest periods and travel time
-    - Optimize routes and minimize transportation time
-    - Consider weather conditions and seasonal factors
-    - Ensure realistic and achievable daily schedules
+    - Identify scheduling conflicts and logistical issues
+    - Evaluate activity balance and pacing
+    - Suggest optimizations for routes and timing
+    - Check weather considerations and contingencies
+    - Ensure itinerary matches traveler preferences and constraints
     """
     
     def __init__(self):
         super().__init__(
-            agent_name="itinerary_expert",
-            system_prompt=get_agent_prompt("itinerary_expert"),
+            agent_name="trip_critic",
+            system_prompt=get_agent_prompt("trip_critic"),
             reasoning_steps=[
-                "Analyze available attractions and optimal daily distribution",
-                "Consider weather patterns and activity suitability",
-                "Optimize routing and minimize travel time between locations",
-                "Balance activity intensity with rest and meal periods",
-                "Create realistic and enjoyable daily schedules"
+                "Evaluate overall itinerary balance and pacing",
+                "Identify scheduling conflicts and logistical issues",
+                "Assess weather contingencies and seasonal considerations",
+                "Review accommodation and transport logistics",
+                "Verify alignment with traveler preferences and constraints"
             ]
         )
     
     async def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Main processing method for itinerary creation
+        Main processing method for itinerary criticism and feedback
         """
-        self.log_action("Starting itinerary creation")
+        self.log_action("Starting itinerary evaluation and critique")
         
         # Validate input
-        await self.validate_input(input_data, ["travel_request", "collected_data", "local_expertise"])
+        await self.validate_input(input_data, ["travel_request", "draft_itinerary"])
         
         travel_request = input_data["travel_request"]
         collected_data = input_data["collected_data"]

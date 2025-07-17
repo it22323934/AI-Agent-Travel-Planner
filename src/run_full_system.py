@@ -74,7 +74,7 @@ safe_import("agents.itinerary_expert", "ItineraryExpert", "Itinerary Expert Agen
 safe_import("agents.local_expert", "LocalExpert", "Local Expert Agent")
 safe_import("agents.planner_agent", "PlannerAgent", "Planner Agent")
 safe_import("agents.prompts", "get_agent_prompt", "Agent Prompts")
-safe_import("agents.trip_critic", "ItineraryExpert", "Trip Critic Agent")
+safe_import("agents.trip_critic", "TripCritic", "Trip Critic Agent")
 
 print("\n🌐 Loading Workflow Components...")
 safe_import("graph.workflow", "TravelPlanningWorkflow", "Travel Planning Workflow")
@@ -204,8 +204,8 @@ async def run_travel_planner():
             print(f"\n✅ TRAVEL PLAN COMPLETE!")
             print("=" * 40)
             
-            if 'format_itinerary' in components:
-                formatter = components['format_itinerary']
+            if 'format_itinerary_output' in components:
+                formatter = components['format_itinerary_output']
                 formatted = formatter(result.itinerary)
                 print(formatted)
             else:
