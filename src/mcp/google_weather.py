@@ -9,6 +9,7 @@ import logging
 import json
 
 from mcp.base_connector import BaseMCPConnector
+from mcp.google_places import GooglePlacesConnector
 from core.models import WeatherInfo
 from core.exceptions import GoogleAPIError
 from core.constants import GOOGLE_APIS
@@ -18,8 +19,10 @@ class GoogleWeatherConnector(BaseMCPConnector):
     """MCP connector for Google Weather API"""
     
     def __init__(self, api_key: str):
-        super().__init__("AIzaSyA-hts7zA_2B0HzOrYJB-FIbhM4Z4VP5TQ", "google_weather")
+        super().__init__("", "google_weather")
         self.base_url = "https://weather.googleapis.com"
+        # Create a places connector to use for geocoding
+        self.places_connector = GooglePlacesConnector(api_key)
     
     async def test_connection(self) -> bool:
         """Test Weather API connectivity"""
@@ -47,14 +50,12 @@ class GoogleWeatherConnector(BaseMCPConnector):
             lat = float(lat.strip())
             lng = float(lng.strip())
         else:
-            # Convert place name to coordinates
-            coords = self.convert_location_to_coordinates(location)
-            if ',' in coords:
-                lat, lng = coords.split(',')
-                lat = float(lat.strip())
-                lng = float(lng.strip())
-            else:
-                # Fallback coordinates if conversion fails
+            # Convert place name to coordinates using Google Places geocoding
+            try:
+                lat, lng = await self.places_connector.geocode_location(location)
+            except Exception as e:
+                self.logger.error(f"Geocoding error for {location}: {e}")
+                # Fallback coordinates if geocoding fails (New York City)
                 lat, lng = 40.7128, -74.0060
         
         # Build params with nested location object
@@ -65,7 +66,7 @@ class GoogleWeatherConnector(BaseMCPConnector):
         }
         
         try:
-            self.logger.info(f"Getting current weather for: {location}")
+            self.logger.info(f"Getting current weather for: {location} ({lat},{lng})")
             self.logger.debug(f"Request params: {params}")
             
             result = await self._make_request("GET", url, params)
@@ -73,6 +74,9 @@ class GoogleWeatherConnector(BaseMCPConnector):
             if not result:
                 self.logger.warning(f"No current weather data for {location}")
                 return None
+            
+            # Log the full response structure to help debug
+            self.logger.debug(f"Current weather API response: {result}")
             
             return self._parse_current_weather(result)
             
@@ -97,14 +101,12 @@ class GoogleWeatherConnector(BaseMCPConnector):
             lat = float(lat.strip())
             lng = float(lng.strip())
         else:
-            # Convert place name to coordinates
-            coords = self.convert_location_to_coordinates(location)
-            if ',' in coords:
-                lat, lng = coords.split(',')
-                lat = float(lat.strip())
-                lng = float(lng.strip())
-            else:
-                # Fallback coordinates if conversion fails
+            # Convert place name to coordinates using Google Places geocoding
+            try:
+                lat, lng = await self.places_connector.geocode_location(location)
+            except Exception as e:
+                self.logger.error(f"Geocoding error for {location}: {e}")
+                # Fallback coordinates if geocoding fails (New York City)
                 lat, lng = 40.7128, -74.0060
         
         # Build params with nested location object
@@ -118,10 +120,13 @@ class GoogleWeatherConnector(BaseMCPConnector):
         }
         
         try:
-            self.logger.info(f"Getting {days}-day forecast for: {location}")
+            self.logger.info(f"Getting {days}-day forecast for: {location} ({lat},{lng})")
             self.logger.debug(f"Request params: {params}")
             
             result = await self._make_request("GET", url, params)
+            
+            # Log the full response structure to help debug
+            self.logger.debug(f"Forecast API response: {result}")
             
             if "forecastDays" not in result:
                 self.logger.warning(f"No forecast data for {location}")
@@ -183,11 +188,31 @@ class GoogleWeatherConnector(BaseMCPConnector):
             # Get weather description - it's an object with 'type' and other fields
             weather_condition_obj = data.get("weatherCondition", {})
             if isinstance(weather_condition_obj, dict):
-                weather_condition = weather_condition_obj.get("type", "Unknown")
-                # Convert enum-style type to readable description
-                weather_condition = weather_condition.replace("_", " ").title()
+                # Try to get the type directly first
+                weather_condition = weather_condition_obj.get("type", None)
+                
+                # If type is not found, look for alternative fields
+                if not weather_condition:
+                    # Check for 'summary' field which might contain the weather description
+                    weather_condition = weather_condition_obj.get("summary", None)
+                
+                # Check for 'condition' or 'description' as alternative fields
+                if not weather_condition:
+                    weather_condition = (weather_condition_obj.get("condition") or 
+                                        weather_condition_obj.get("description") or
+                                        "Unknown")
+                
+                # Convert enum-style type to readable description if it's a string
+                if weather_condition and isinstance(weather_condition, str):
+                    weather_condition = weather_condition.replace("_", " ").title()
+                else:
+                    weather_condition = "Unknown"
             else:
                 weather_condition = "Unknown"
+                
+            # Debug log the weather condition parsing
+            self.logger.debug(f"Weather condition extracted: {weather_condition}")
+            self.logger.debug(f"From weather condition object: {weather_condition_obj}")
             
             # Extract humidity
             humidity = data.get("relativeHumidity", 50)
@@ -202,7 +227,9 @@ class GoogleWeatherConnector(BaseMCPConnector):
                 precipitation_chance=precip_chance
             )
         except Exception as e:
-            self.logger.error(f"Error parsing current weather data: {e}")
+            self.logger.error(f"Error parsing current weather data: {str(e)}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             self.logger.debug(f"Raw data: {data}")
             return None
     
@@ -225,11 +252,31 @@ class GoogleWeatherConnector(BaseMCPConnector):
             # Extract weather condition - it's an object with 'type'
             weather_condition_obj = daytime.get("weatherCondition", {})
             if isinstance(weather_condition_obj, dict):
-                weather_condition = weather_condition_obj.get("type", "Unknown")
-                # Convert enum-style type to readable description
-                weather_condition = weather_condition.replace("_", " ").title()
+                # Try to get the type directly first
+                weather_condition = weather_condition_obj.get("type", None)
+                
+                # If type is not found, look for alternative fields
+                if not weather_condition:
+                    # Check for 'summary' field which might contain the weather description
+                    weather_condition = weather_condition_obj.get("summary", None)
+                
+                # Check for 'condition' or 'description' as alternative fields
+                if not weather_condition:
+                    weather_condition = (weather_condition_obj.get("condition") or 
+                                        weather_condition_obj.get("description") or
+                                        "Unknown")
+                
+                # Convert enum-style type to readable description if it's a string
+                if weather_condition and isinstance(weather_condition, str):
+                    weather_condition = weather_condition.replace("_", " ").title()
+                else:
+                    weather_condition = "Unknown"
             else:
                 weather_condition = "Unknown"
+                
+            # Debug log the weather condition parsing
+            self.logger.debug(f"Forecast day weather condition extracted: {weather_condition}")
+            self.logger.debug(f"From weather condition object: {weather_condition_obj}")
             
             # Extract daytime precipitation - it's an object with 'percent' and 'type'
             daytime_precip = daytime.get("precipitation", {})
@@ -257,41 +304,13 @@ class GoogleWeatherConnector(BaseMCPConnector):
                 precipitation_chance=precip_chance
             )
         except Exception as e:
-            self.logger.error(f"Error parsing forecast day: {e}")
+            self.logger.error(f"Error parsing forecast day: {str(e)}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             self.logger.debug(f"Raw day data: {day_data}")
             return None
     
-    def convert_location_to_coordinates(self, location: str) -> str:
-        """Convert location name to coordinates for testing
-        
-        In production, this should use Google's Geocoding API
-        """
-        # Mock coordinates for common locations
-        location_lower = location.lower()
-        
-        coordinates_map = {
-            "new york": "40.7128,-74.0060",
-            "nyc": "40.7128,-74.0060",
-            "new york, ny": "40.7128,-74.0060",
-            "london": "51.5074,-0.1278",
-            "tokyo": "35.6762,139.6503",
-            "paris": "48.8566,2.3522",
-            "sydney": "-33.8688,151.2093",
-            "los angeles": "34.0522,-118.2437",
-            "la": "34.0522,-118.2437",
-            "chicago": "41.8781,-87.6298",
-            "san francisco": "37.7749,-122.4194",
-            "sf": "37.7749,-122.4194"
-        }
-        
-        for key, coords in coordinates_map.items():
-            if key in location_lower:
-                self.logger.info(f"Converted '{location}' to coordinates: {coords}")
-                return coords
-        
-        # If not found, return original location (API might handle it)
-        self.logger.warning(f"Could not convert '{location}' to coordinates, using as-is")
-        return location
+    # Location to coordinates conversion is now handled by GooglePlacesConnector
     
     def _generate_mock_weather(self, location: str, date: str) -> WeatherInfo:
         """Generate mock weather data for development/testing"""
